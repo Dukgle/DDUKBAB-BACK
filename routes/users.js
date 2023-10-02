@@ -3,6 +3,7 @@
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 const db = require('../config/dbConfig');
 
 // 회원가입 API 엔드포인트
@@ -38,19 +39,11 @@ router.post('/register', (req, res) => {
   });
 });
 
-// 로그인 API 엔드포인트
 router.post('/login', (req, res) => {
-  const { uni_num, password, role } = req.body;
+  const { uni_num, password } = req.body;
 
-  let tableName;
-  if (role === '학생' || role === '교직원') {
-    tableName = 'users';
-  } else if (role === '판매자') {
-    tableName = 'salers';
-  }
-
-  // 사용자 정보 조회 (uni_num을 통해 저장된 해싱된 비밀번호를 가져옴)
-  const query = `SELECT uni_num, password FROM ${tableName} WHERE uni_num = ?`;
+  // 사용자 정보 조회 (uni_num을 통해 저장된 해싱된 비밀번호와 role을 가져옴)
+  const query = `SELECT user_id, uni_num, password, role FROM users WHERE uni_num = ?`;
   db.query(query, [uni_num], (err, rows) => {
     if (err) {
       console.error('로그인 오류:', err);
@@ -64,6 +57,7 @@ router.post('/login', (req, res) => {
     }
 
     const storedPassword = rows[0].password;
+    const role = rows[0].role;
 
     // 비밀번호 검증
     bcrypt.compare(password, storedPassword, (err, result) => {
@@ -72,12 +66,14 @@ router.post('/login', (req, res) => {
         return;
       }
 
+      // JWT 토큰 발급
+      const token = jwt.sign({ userId: rows[0].user_id, role }, 'your-secret-key', { expiresIn: '5h' });
+
       console.log('로그인 성공');
-      res.json({ message: '로그인 성공' });
+      res.json({ message: '로그인 성공', token });
     });
   });
 });
 
-;
 
 module.exports = router;

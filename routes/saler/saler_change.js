@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../config/dbConfig');
+const db = require('../../config/dbConfig');
 
 router.put('/:salerId/nickname-update', (req, res) => {
     const salerId = req.params.salerId;
