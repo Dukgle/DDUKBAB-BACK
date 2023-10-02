@@ -26,7 +26,7 @@ function verifyToken(req, res, next) {
 }
 
 // 게시글 조회 엔드포인트 수정: 유저 ID와 함께
-router.get('/posting/:postId', verifyToken, (req, res) => {
+router.get('/get/:postId', verifyToken, (req, res) => {
   const userId = req.userId;
   const postId = req.params.postId;
 
@@ -110,6 +110,76 @@ router.delete('/delete/:postId', verifyToken, (req, res) => {
     }
     const successMsg ='게시글 삭제 성공';
     res.json({message:successMsg});
+  });
+});
+
+// 게시글 좋아요 api
+router.post('/like-post/:postId', verifyToken, (req, res) => {
+  const userId = req.userId;
+  const postId = req.params.postId;
+
+  // 게시물 작성자 정보 조회 (예: posts 테이블에서 작성자 정보 조회)
+  db.query('SELECT user_id FROM posts WHERE post_id = ?', [postId], (err, rows) => {
+      if (err) {
+          console.error('MySQL 쿼리 오류:', err);
+          return res.status(500).json({ error: '서버 오류' });
+      }
+
+      if (rows.length === 0) {
+          return res.status(404).json({ error: '게시물이 존재하지 않습니다.' });
+      }
+
+      const postAuthorId = rows[0].user_id;
+
+      // 게시물 작성자와 로그인한 사용자가 동일한 경우
+      if (postAuthorId === userId) {
+          return res.status(400).json({ error: '자신의 글에는 좋아요를 누를 수 없습니다.' });
+      }
+
+      // 좋아요 클릭 기록 확인
+      db.query('SELECT * FROM likes WHERE user_id = ? AND post_id = ?', [userId, postId], (err, rows) => {
+          if (err) {
+              console.error('MySQL 쿼리 오류:', err);
+              return res.status(500).json({ error: '서버 오류' });
+          }
+
+          if (rows.length > 0) {
+              // 이미 클릭한 경우
+              return res.status(400).json({ error: '이미 좋아요를 클릭했습니다.' });
+          } else {
+              // 클릭 가능한 경우, 좋아요 클릭 기록을 추가
+              db.query('INSERT INTO likes (user_id, post_id) VALUES (?, ?)', [userId, postId], (err, result) => {
+                  if (err) {
+                      console.error('MySQL 쿼리 오류:', err);
+                      return res.status(500).json({ error: '서버 오류' });
+                  }
+
+                  res.json({ message: '게시글 좋아요가 업데이트되었습니다.' });
+              });
+          }
+      });
+  });
+});
+
+
+
+router.get('/like-get/:postId', (req, res) => {
+  const postId = req.params.postId;
+
+  const query = `SELECT likes FROM posts WHERE post_id = ?`;
+
+  db.query(query, [postId], (err, result) => {
+    if (err) {
+      console.error('좋아요 조회 오류:', err);
+      res.status(500).json({ error: '좋아요 조회 실패' });
+      return;
+    }
+    if (result.length === 0) {
+      res.status(404).json({ error: '좋아요 수를 찾을 수 없습니다' });
+      return;
+    }
+    const like = result[0];
+    res.json({ like });
   });
 });
 
