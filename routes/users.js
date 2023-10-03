@@ -40,10 +40,17 @@ router.post('/register', (req, res) => {
 });
 
 router.post('/login', (req, res) => {
-  const { uni_num, password } = req.body;
+  const { uni_num, password} = req.body;
+
+
+  
+  const tableName = /^[가-힣]+$/.test(uni_num.trim()) ? 'salers' : 'users';
+
+  if (tableName === 'salers') id = 'saler_id';
+  else id = 'user_id';
 
   // 사용자 정보 조회 (uni_num을 통해 저장된 해싱된 비밀번호와 role을 가져옴)
-  const query = `SELECT user_id, uni_num, password, role FROM users WHERE uni_num = ?`;
+  const query = `SELECT ${id}, uni_num, password, role FROM ${tableName} WHERE uni_num = ?`;
   db.query(query, [uni_num], (err, rows) => {
     if (err) {
       console.error('로그인 오류:', err);
@@ -67,10 +74,15 @@ router.post('/login', (req, res) => {
       }
 
       // JWT 토큰 발급
-      const token = jwt.sign({ userId: rows[0].user_id, role }, 'your-secret-key', { expiresIn: '5h' });
+      const payload = {id: rows[0][tableName === 'users' ? 'user_id' : 'saler_id'], uni_num, role}
+      console.log(uni_num, role);
+      const secretKey = 'your-secret-key'
+      const expiresIn = '5h';
+      const token = jwt.sign(payload, secretKey, {expiresIn});
 
       console.log('로그인 성공');
-      res.json({ message: '로그인 성공', token });
+      res.json({ message: '로그인 성공', token});
+      
     });
   });
 });
