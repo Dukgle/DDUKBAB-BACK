@@ -73,13 +73,25 @@ router.post('/login', (req, res) => {
         return;
       }
 
+      let payload;
+      if (tableName === 'users') {
+        payload = {
+          userId: rows[0].user_id, // 사용자 ID (user_id 또는 saler_id)
+          uni_num,
+          role,
+        };;
+      } else {
+        payload = {
+          salerId: rows[0].saler_id, // 사용자 ID (user_id 또는 saler_id)
+          uni_num,
+          role,
+        };
+      }
+      
       // JWT 토큰 발급
-      const payload = {id: rows[0][tableName === 'users' ? 'user_id' : 'saler_id'], uni_num, role}
-      console.log(uni_num, role);
       const secretKey = 'your-secret-key'
       const expiresIn = '5h';
       const token = jwt.sign(payload, secretKey, {expiresIn});
-
       console.log('로그인 성공');
       res.json({ message: '로그인 성공', token});
       

@@ -7,6 +7,7 @@ const posts = require('./routes/posts');
 const my_page = require('./routes/my_page')
 const seat_reserve = require('./routes/seat_reserve')
 const user_change = require('./routes/user_change')
+const bookmark = require('./routes/bookmark');
 
 const saler_page = require('./routes/saler/saler_page')
 const saler_change = require('./routes/saler/saler_change')
@@ -24,6 +25,7 @@ app.use('/api/users', user_change);
 app.use('/api/users', my_page);
 app.use('/api/users/reservation', seat_reserve);
 app.use('/api/users/posts', posts);
+app.use('/api/users/bookmarks', bookmark);
 
 app.use('/api/salers', saler_menu)
 app.use('/api/salers', saler_page);

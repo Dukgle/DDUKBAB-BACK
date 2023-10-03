@@ -18,7 +18,7 @@ function verifyToken(req, res, next) {
         return res.status(401).json({ error: '인증 토큰이 유효하지 않습니다' });
   
       }
-      req.salerId = decoded.saler_id; // JWT에 저장된 사용자 ID를 request 객체에 저장
+      req.salerId = decoded.salerId; // JWT에 저장된 사용자 ID를 request 객체에 저장
       req.uniNum = decoded.uni_num;
       req.role = decoded.role; // JWT에 저장된 사용자 역할을 request 객체에 저장
       next();
@@ -33,19 +33,19 @@ function verifyToken(req, res, next) {
 
     // console.log(salerId, uniNum, role);
 
-    let tableName;
-    if (role === "판매자") {
-        if (uniNum === "마성떡볶이") tableName = 'masung';
-        else if (uniNum === "한우사골마라탕") tableName = 'mara';
-        else if (uniNum === "파스타") tableName = 'pasta';
-        else if (uniNum === "군산카츠") tableName = 'pork';
-        else if (uniNum === "샌드위치카페") tableName = 'cafe';
-        else if (uniNum === "토스트") tableName = 'toast';
-        else if (uniNum === "오늘의메뉴A") tableName = 'today_menu_a';
-        else if (uniNum === "오늘의메뉴B") tableName = 'today_menu_b';
-    }
+    // let tableName;
+    // if (role === "판매자") {
+    //     if (uniNum === "마성떡볶이") tableName = 'masung';
+    //     else if (uniNum === "한우사골마라탕") tableName = 'mara';
+    //     else if (uniNum === "파스타") tableName = 'pasta';
+    //     else if (uniNum === "군산카츠") tableName = 'pork';
+    //     else if (uniNum === "샌드위치카페") tableName = 'cafe';
+    //     else if (uniNum === "토스트") tableName = 'toast';
+    //     else if (uniNum === "오늘의메뉴A") tableName = 'today_menu_a';
+    //     else if (uniNum === "오늘의메뉴B") tableName = 'today_menu_b';
+    // }
 
-    const query = `SELECT out_of_stock FROM ${tableName} WHERE menu_name = ?`;
+    const query = `SELECT out_of_stock FROM menu WHERE menu_name = ?`;
 
     db.query(query, [menuName], (err, result) => {
         if (err) {
@@ -65,19 +65,19 @@ router.put('/sold-out', verifyToken ,(req,res) => {
 
     // console.log(salerId, uniNum, role);
 
-    let tableName;
-    if (role === "판매자") {
-        if (uniNum === "마성떡볶이") tableName = 'masung';
-        else if (uniNum === "한우사골마라탕") tableName = 'mara';
-        else if (uniNum === "파스타") tableName = 'pasta';
-        else if (uniNum === "군산카츠") tableName = 'pork';
-        else if (uniNum === "샌드위치카페") tableName = 'cafe';
-        else if (uniNum === "토스트") tableName = 'toast';
-        else if (uniNum === "오늘의메뉴A") tableName = 'today_menu_a';
-        else if (uniNum === "오늘의메뉴B") tableName = 'today_menu_b';
-    }
+    // let tableName;
+    // if (role === "판매자") {
+    //     if (uniNum === "마성떡볶이") tableName = 'masung';
+    //     else if (uniNum === "한우사골마라탕") tableName = 'mara';
+    //     else if (uniNum === "파스타") tableName = 'pasta';
+    //     else if (uniNum === "군산카츠") tableName = 'pork';
+    //     else if (uniNum === "샌드위치카페") tableName = 'cafe';
+    //     else if (uniNum === "토스트") tableName = 'toast';
+    //     else if (uniNum === "오늘의메뉴A") tableName = 'today_menu_a';
+    //     else if (uniNum === "오늘의메뉴B") tableName = 'today_menu_b';
+    // }
 
-    const query = `UPDATE ${tableName} SET out_of_stock = ? WHERE menu_name = ?`;
+    const query = `UPDATE menu SET out_of_stock = ? WHERE menu_name = ?`;
     db.query(query, [out_of_stock, menu_name], (err, result) => {
       if (err) {
         console.error('품절 처리 오류:', err);
