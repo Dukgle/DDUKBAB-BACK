@@ -59,23 +59,23 @@ function verifyToken(req, res, next) {
     });
   });
 
-  router.delete('/delete/:postId', verifyToken, (req, res) => {
+  router.delete('/delete/:bookmarkId', verifyToken, (req, res) => {
     const userId = req.userId;
-    const postId = req.params.postId;
+    const bookmarkId = req.params.bookmarkId;
   
-    const query = `DELETE FROM posts WHERE post_id=? AND user_id=?`;
+    const query = `DELETE FROM bookmarks WHERE bookmark_id=? AND user_id=?`;
   
-    db.query(query, [postId, userId], (err, result) => {
+    db.query(query, [bookmarkId, userId], (err, result) => {
       if (err) {
-        console.error('게시글 삭제 오류:', err);
-        res.status(500).json({ error: '게시글 삭제 실패' });
+        console.error('즐겨찾기 삭제 오류:', err);
+        res.status(500).json({ error: '즐겨찾기 삭제 실패' });
         return;
       }
       if (result.affectedRows === 0) {
-          res.status(404).json({ error: '게시글을 삭제할 수 없습니다' });
+          res.status(404).json({ error: '즐겨찾기를 삭제할 수 없습니다' });
           return;
       }
-      const successMsg ='게시글 삭제 성공';
+      const successMsg ='즐겨찾기 삭제 성공';
       res.json({message:successMsg});
     });
   });
