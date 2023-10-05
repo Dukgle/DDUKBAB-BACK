@@ -1,3 +1,4 @@
 config
 ./config/db.js
 app.js
+uploads

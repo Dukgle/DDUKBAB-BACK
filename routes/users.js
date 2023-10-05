@@ -9,6 +9,7 @@ const db = require('../config/dbConfig');
 // 회원가입 API 엔드포인트
 router.post('/register', (req, res) => {
   const { username, uni_num, nickname, password, role } = req.body;
+  const created_at = new Date();
 
   // 비밀번호 해싱
   bcrypt.hash(password, 10, (err, hash) => {
@@ -26,8 +27,8 @@ router.post('/register', (req, res) => {
     }
 
     // 해싱된 비밀번호를 데이터베이스에 저장
-    const query = `INSERT INTO ${tableName} (username, uni_num, nickname, password, role) VALUES (?, ?, ?, ?, ?)`;
-    db.query(query, [username, uni_num, nickname, hash, role], (err, result) => {
+    const query = `INSERT INTO ${tableName} (username, uni_num, nickname, password, role, created_at) VALUES (?, ?, ?, ?, ?)`;
+    db.query(query, [username, uni_num, nickname, hash, role, created_at], (err, result) => {
       if (err) {
         console.error('회원가입 오류:', err);
         res.status(500).json({ error: '회원가입 실패' });
@@ -42,8 +43,6 @@ router.post('/register', (req, res) => {
 router.post('/login', (req, res) => {
   const { uni_num, password} = req.body;
 
-
-  
   const tableName = /^[가-힣]+$/.test(uni_num.trim()) ? 'salers' : 'users';
 
   if (tableName === 'salers') id = 'saler_id';
@@ -99,5 +98,33 @@ router.post('/login', (req, res) => {
   });
 });
 
+// 로그아웃
+const invalidTokens = [];
+router.post('/logout', (req, res) => {
+  const token = req.headers.authorization
+
+  if (!token) {
+    return res.status(400).json({ error: '토큰이 전송되지 않았습니다.' });
+  }
+
+  // 무효화된 토큰 배열에 토큰을 추가합니다.
+  invalidTokens.push(token);
+
+  // 로그아웃 메시지를 응답으로 보내줍니다.
+  res.json({ message: '로그아웃 성공' });
+});
+
+// 무효화된 토큰을 확인하는 미들웨어
+function checkInvalidToken(req, res, next) {
+  const token = req.headers.authorization; // 클라이언트에서 전송한 토큰
+
+  // 무효화된 토큰 배열에 있는지 확인합니다.
+  if (invalidTokens.includes(token)) {
+    return res.status(401).json({ error: '토큰이 무효화되었습니다.' });
+  }
+
+  // 무효화된 토큰이 아니면 다음 미들웨어로 진행합니다.
+  next();
+}
 
 module.exports = router;

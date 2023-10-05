@@ -25,7 +25,7 @@ function verifyToken(req, res, next) {
   });
 }
 
-// 게시글 조회 엔드포인트 수정: 유저 ID와 함께
+// 내 게시글 조회 한개
 router.get('/get/:postId', verifyToken, (req, res) => {
   const userId = req.userId;
   const postId = req.params.postId;
@@ -47,17 +47,152 @@ router.get('/get/:postId', verifyToken, (req, res) => {
   });
 });
 
+// 내 게시글 조회 전부
+router.get('/get', verifyToken, (req, res) => {
+  const userId = req.userId;
+  const query = `SELECT content, created_at, star FROM posts WHERE user_id = ?`;
 
-// 나머지 엔드포인트도 유저 ID를 검증하여 사용자만 해당 작업을 수행하도록 수정
+  db.query(query, [userId], (err, result) => {
+    if (err) {
+      console.error('게시글 조회 오류:', err);
+      res.status(500).json({ error: '게시글 조회 실패' });
+      return;
+    }
+    if (result.length === 0) {
+      res.status(404).json({ error: '게시글을 찾을 수 없습니다' });
+      return;
+    }
+    const post = result;
+    res.json({ post });
+  });
+});
+
+// 모두가 확인 가능
+router.get('/get-everyone', (req, res) => {
+  // "sort"와 "menu" 값을 요청에서 추출합니다.
+  const { sort, menu } = req.body;
+
+  // SQL 쿼리를 동적으로 생성합니다.
+  let query = 'SELECT users.nickname, posts.content, posts.star, posts.created_at FROM posts join users where posts.user_id = users.user_id and posts.sort = ? AND posts.menu = ?';
+
+  // // "sort" 및 "menu"가 요청에 포함된 경우, 조건을 추가합니다.
+  // if (sort && menu) {
+  //   query += ` `;
+  // } else if (sort) {
+  //   query += ` and sort = ?`;
+  // } else if (menu) {
+  //   query += ` and menu = ?`;
+  // }
+
+  // console.log(query)
+
+  // 데이터베이스 쿼리를 실행합니다.
+  db.query(query, [sort, menu], (err, result) => {
+    if (err) {
+      console.error('게시글 조회 오류:', err);
+      res.status(500).json({ error: '게시글 조회 실패' });
+      return;
+    }
+    if (result.length === 0) {
+      res.status(404).json({ error: '게시글을 찾을 수 없습니다' });
+      return;
+    }
+    const post = result;
+    res.json({ post });
+  });
+});
+
+// 모두가 최신 순으로 볼 수 있게
+router.get('/get-everyone/latest', (req, res) => {
+  // "sort"와 "menu" 값을 요청에서 추출합니다.
+  const { sort, menu } = req.body;
+
+  // SQL 쿼리를 동적으로 생성합니다.
+  let query = 'SELECT users.nickname, posts.content, posts.star, posts.created_at FROM posts JOIN users ON posts.user_id = users.user_id';
+
+  // 정렬 기준을 추가하여 최신순으로 정렬합니다.
+  query += ' ORDER BY posts.created_at ASC';
+
+  // 데이터베이스 쿼리를 실행합니다.
+  db.query(query, [sort, menu], (err, result) => {
+    if (err) {
+      console.error('게시글 조회 오류:', err);
+      res.status(500).json({ error: '게시글 조회 실패' });
+      return;
+    }
+    if (result.length === 0) {
+      res.status(404).json({ error: '게시글을 찾을 수 없습니다' });
+      return;
+    }
+    const post = result;
+    res.json({ post });
+  });
+});
+
+
+// 모두가 별점 순으로 볼 수 있게
+router.get('/get-everyone/star', (req, res) => {
+  // "sort"와 "menu" 값을 요청에서 추출합니다.
+  const { sort, menu } = req.body;
+
+  // SQL 쿼리를 동적으로 생성합니다.
+  let query = 'SELECT users.nickname, posts.content, posts.star, posts.created_at FROM posts JOIN users ON posts.user_id = users.user_id';
+
+  // 정렬 기준을 추가하여 최신순으로 정렬합니다.
+  query += ' ORDER BY posts.star DESC';
+
+  // 데이터베이스 쿼리를 실행합니다.
+  db.query(query, [sort, menu], (err, result) => {
+    if (err) {
+      console.error('게시글 조회 오류:', err);
+      res.status(500).json({ error: '게시글 조회 실패' });
+      return;
+    }
+    if (result.length === 0) {
+      res.status(404).json({ error: '게시글을 찾을 수 없습니다' });
+      return;
+    }
+    const post = result;
+    res.json({ post });
+  });
+});
+
+
+// 모두가 확인 가능(일부 게시)
+router.get('/get-everyone/:postId', (req, res) => {
+  // "sort"와 "menu" 값을 요청에서 추출합니다.
+  const postId = req.params.postId;
+  const { sort, menu } = req.body;
+
+  // SQL 쿼리를 동적으로 생성합니다.
+  let query = 'SELECT posts.post_id,posts.title, users.nickname, posts.sort, posts.menu, posts.star, posts.content, posts.created_at, posts.likes FROM posts join users where posts.user_id = users.user_id and posts.sort = ? AND posts.menu = ? AND posts.post_id = ?';
+
+  // 데이터베이스 쿼리를 실행합니다.
+  db.query(query, [sort, menu, postId], (err, result) => {
+    if (err) {
+      console.error('게시글 조회 오류:', err);
+      res.status(500).json({ error: '게시글 조회 실패' });
+      return;
+    }
+    if (result.length === 0) {
+      res.status(404).json({ error: '게시글을 찾을 수 없습니다' });
+      return;
+    }
+    const post = result;
+    res.json({ post });
+  });
+});
+
 
 // 게시글 작성 엔드포인트
 router.post('/create', verifyToken, (req, res) => {
   const userId = req.userId;
   const { sort, menu, star, title, content } = req.body;
+  const createAt = new Date();
 
-  const query = `INSERT INTO posts (user_id, sort, menu, star, title, content) VALUES (?,?,?,?,?,?)`;
+  const query = `INSERT INTO posts (user_id, sort, menu, star, title, content, created_at) VALUES (?,?,?,?,?,?,?)`;
 
-  db.query(query, [userId, sort, menu, star, title, content], (err, result) => {
+  db.query(query, [userId, sort, menu, star, title, content, createAt], (err, result) => {
     if (err) {
       console.error('게시글 작성 오류:', err);
       res.status(500).json({ error: '게시글 작성 실패' });
