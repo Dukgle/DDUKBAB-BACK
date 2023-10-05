@@ -248,55 +248,78 @@ router.delete('/delete/:postId', verifyToken, (req, res) => {
   });
 });
 
-// 게시글 좋아요 api
+// 게시글 좋아요 API
 router.post('/like-post/:postId', verifyToken, (req, res) => {
   const userId = req.userId;
   const postId = req.params.postId;
+  const createdAt = new Date(); // 변수명 수정: createAt -> createdAt
 
   // 게시물 작성자 정보 조회 (예: posts 테이블에서 작성자 정보 조회)
   db.query('SELECT user_id FROM posts WHERE post_id = ?', [postId], (err, rows) => {
+    if (err) {
+      console.error('MySQL 쿼리 오류:', err);
+      return res.status(500).json({ error: '서버 오류' });
+    }
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: '게시물이 존재하지 않습니다.' });
+    }
+
+    const postAuthorId = rows[0].user_id;
+
+    // 게시물 작성자와 로그인한 사용자가 동일한 경우
+    if (postAuthorId === userId) {
+      return res.status(400).json({ error: '자신의 글에는 좋아요를 누를 수 없습니다.' });
+    }
+
+    // 좋아요 클릭 기록 확인
+    db.query('SELECT * FROM likes WHERE user_id = ? AND post_id = ?', [userId, postId], (err, rows) => {
       if (err) {
-          console.error('MySQL 쿼리 오류:', err);
-          return res.status(500).json({ error: '서버 오류' });
+        console.error('MySQL 쿼리 오류:', err);
+        return res.status(500).json({ error: '서버 오류' });
       }
 
-      if (rows.length === 0) {
-          return res.status(404).json({ error: '게시물이 존재하지 않습니다.' });
-      }
-
-      const postAuthorId = rows[0].user_id;
-
-      // 게시물 작성자와 로그인한 사용자가 동일한 경우
-      if (postAuthorId === userId) {
-          return res.status(400).json({ error: '자신의 글에는 좋아요를 누를 수 없습니다.' });
-      }
-
-      // 좋아요 클릭 기록 확인
-      db.query('SELECT * FROM likes WHERE user_id = ? AND post_id = ?', [userId, postId], (err, rows) => {
+      if (rows.length > 0) {
+        // 이미 클릭한 경우
+        return res.status(400).json({ error: '이미 좋아요를 클릭했습니다.' });
+      } else {
+        // 클릭 가능한 경우, 좋아요 클릭 기록을 추가
+        db.query('INSERT INTO likes (user_id, post_id, created_at) VALUES (?, ?, ?)', [userId, postId, createdAt], (err, result) => {
           if (err) {
+            console.error('MySQL 쿼리 오류:', err);
+            return res.status(500).json({ error: '서버 오류' });
+          }
+
+          // 게시물의 likes 열을 1 증가시킵니다.
+          db.query('UPDATE posts SET likes = likes + 1 WHERE post_id = ?', [postId], (err, updateResult) => {
+            if (err) {
               console.error('MySQL 쿼리 오류:', err);
               return res.status(500).json({ error: '서버 오류' });
-          }
+            }
 
-          if (rows.length > 0) {
-              // 이미 클릭한 경우
-              return res.status(400).json({ error: '이미 좋아요를 클릭했습니다.' });
-          } else {
-              // 클릭 가능한 경우, 좋아요 클릭 기록을 추가
-              db.query('INSERT INTO likes (user_id, post_id) VALUES (?, ?)', [userId, postId], (err, result) => {
-                  if (err) {
-                      console.error('MySQL 쿼리 오류:', err);
-                      return res.status(500).json({ error: '서버 오류' });
-                  }
+            // 좋아요를 가장 많이 받은 3개의 게시물을 조회하는 쿼리 (좋아요를 누른 게시물은 작성자와 일치하는 게시물만 선택)
+            const topLikedPostsQuery = `
+              SELECT posts.*
+              FROM posts WHERE posts.user_id = ?
+              GROUP BY posts.post_id
+              ORDER BY likes DESC
+              LIMIT 3
+            `;
 
-                  res.json({ message: '게시글 좋아요가 업데이트되었습니다.' });
-              });
-          }
-      });
+            db.query(topLikedPostsQuery, [postAuthorId], (err, topLikedPosts) => {
+              if (err) {
+                console.error('MySQL 쿼리 오류:', err);
+                return res.status(500).json({ error: '서버 오류' });
+              }
+
+              res.json({ message: '게시글 좋아요가 업데이트되었습니다.', topLikedPosts });
+            });
+          });
+        });
+      }
+    });
   });
 });
-
-
 
 router.get('/like-get/:postId', (req, res) => {
   const postId = req.params.postId;
@@ -317,5 +340,42 @@ router.get('/like-get/:postId', (req, res) => {
     res.json({ like });
   });
 });
+
+// 게시글 좋아요 삭제 API
+router.delete('/like-delete/:postId', verifyToken, (req, res) => {
+  const userId = req.userId;
+  const postId = req.params.postId;
+
+  // 좋아요 클릭 기록 확인
+  db.query('SELECT * FROM likes WHERE user_id = ? AND post_id = ?', [userId, postId], (err, rows) => {
+    if (err) {
+      console.error('MySQL 쿼리 오류:', err);
+      return res.status(500).json({ error: '서버 오류' });
+    }
+
+    if (rows.length === 0) {
+      // 클릭한 좋아요 기록이 없는 경우
+      return res.status(404).json({ error: '좋아요 기록을 찾을 수 없습니다.' });
+    }
+
+    // 좋아요 클릭 기록 삭제
+    db.query('DELETE FROM likes WHERE user_id = ? AND post_id = ?', [userId, postId], (err, result) => {
+      if (err) {
+        console.error('MySQL 쿼리 오류:', err);
+        return res.status(500).json({ error: '서버 오류' });
+      }
+
+      db.query('UPDATE posts SET likes = likes + 1 WHERE post_id = ?', [postId], (err, updateResult) => {
+        if (err) {
+          console.error('MySQL 쿼리 오류:', err);
+          return res.status(500).json({ error: '서버 오류' });
+        }
+
+      res.json({ message: '게시글 좋아요가 삭제되었습니다.' });
+    });
+  });
+  });
+});
+
 
 module.exports = router;

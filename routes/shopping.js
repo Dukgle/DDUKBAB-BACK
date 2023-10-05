@@ -88,9 +88,6 @@ function verifyToken(req, res, next) {
           return;
         }
         // res.json({message: "주문 전달 성공" });
-
-
-
     });
     res.json({ orders: result, totalOrderAmount, message : "주문 전달 성공"});
  }); 
